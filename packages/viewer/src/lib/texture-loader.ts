@@ -1,7 +1,12 @@
 import { TextureLoader, RepeatWrapping, SRGBColorSpace, type Texture } from 'three'
 
 const textureCache = new Map<string, Texture>()
-const loader = new TextureLoader()
+let loader: TextureLoader | null = null
+
+function getLoader(): TextureLoader {
+  if (!loader) loader = new TextureLoader()
+  return loader
+}
 
 export function loadTexture(url: string, repeat: [number, number] = [1, 1]): Texture | null {
   const cacheKey = `${url}-${repeat[0]}-${repeat[1]}`
@@ -9,7 +14,7 @@ export function loadTexture(url: string, repeat: [number, number] = [1, 1]): Tex
     return textureCache.get(cacheKey)!
   }
 
-  const texture = loader.load(url)
+  const texture = getLoader().load(url)
   texture.wrapS = RepeatWrapping
   texture.wrapT = RepeatWrapping
   texture.repeat.set(repeat[0], repeat[1])
