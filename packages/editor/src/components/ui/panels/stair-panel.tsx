@@ -6,6 +6,7 @@ import {
   type MaterialSchema,
   type StairNode,
   type StairRailingMode,
+  type StairSupportType,
   type StairTopLandingMode,
   type StairType,
   StairNode as StairNodeSchema,
@@ -18,7 +19,12 @@ import { Copy, Move, Plus, Trash2 } from 'lucide-react'
 import { useCallback } from 'react'
 import { sfxEmitter } from '../../../lib/sfx-bus'
 import useEditor from '../../../store/use-editor'
-import { DEFAULT_SPIRAL_STAIR_SWEEP_ANGLE } from '../../tools/stair/stair-defaults'
+import {
+  DEFAULT_SPIRAL_STAIR_SWEEP_ANGLE,
+  L_STAIR_PRESET_SEGMENTS,
+  U_STAIR_PRESET_SEGMENTS,
+} from '../../tools/stair/stair-defaults'
+import { createSegmentsFromPreset } from '../../tools/stair/stair-tool'
 import { ActionButton, ActionGroup } from '../controls/action-button'
 import { MaterialPicker } from '../controls/material-picker'
 import { MetricControl } from '../controls/metric-control'
@@ -35,10 +41,26 @@ const RAILING_MODE_OPTIONS: { label: string; value: StairRailingMode }[] = [
   { label: 'Both', value: 'both' },
 ]
 
-const STAIR_TYPE_OPTIONS: { label: string; value: StairType }[] = [
+/**
+ * Extended stair type includes L-Shape and U-Shape presets.
+ * These are composed of straight segments with specific attachment sides,
+ * so they use 'straight' as the underlying stairType in the schema.
+ */
+type StairTypeExtended = StairType | 'l-shape' | 'u-shape'
+
+const STAIR_TYPE_OPTIONS: { label: string; value: StairTypeExtended }[] = [
   { label: 'Straight', value: 'straight' },
+  { label: 'L-Shape', value: 'l-shape' },
+  { label: 'U-Shape', value: 'u-shape' },
   { label: 'Curved', value: 'curved' },
   { label: 'Spiral', value: 'spiral' },
+]
+
+const SUPPORT_TYPE_OPTIONS: { label: string; value: StairSupportType }[] = [
+  { label: 'None', value: 'none' },
+  { label: 'Filled', value: 'filled' },
+  { label: 'Stringer', value: 'stringer' },
+  { label: 'Wall', value: 'wall-mounted' },
 ]
 
 const TOP_LANDING_MODE_OPTIONS: { label: string; value: StairTopLandingMode }[] = [
@@ -126,6 +148,84 @@ export function StairPanel() {
     createNode(segment, node.id as AnyNodeId)
   }, [node, createNode, getLastSegmentFillDefaults])
 
+  /**
+   * Determines the effective extended stair type by inspecting segment arrangement.
+   * L-Shape and U-Shape are straight stairs with specific segment patterns.
+   */
+  const getExtendedStairType = useCallback((): StairTypeExtended => {
+    if (!node) return 'straight'
+    const baseType = node.stairType ?? 'straight'
+    if (baseType !== 'straight') return baseType
+
+    const segs = (node.children ?? [])
+      .map((childId) => nodes[childId as AnyNodeId] as StairSegmentNode | undefined)
+      .filter((n): n is StairSegmentNode => n?.type === 'stair-segment')
+
+    if (segs.length === 3) {
+      const hasLeftTurn =
+        segs[0]?.segmentType === 'stair' &&
+        segs[1]?.segmentType === 'landing' &&
+        segs[2]?.segmentType === 'stair' &&
+        segs[2]?.attachmentSide === 'left'
+
+      if (hasLeftTurn) {
+        // Distinguish L vs U by landing width
+        if (segs[1].width >= 1.8) return 'u-shape'
+        return 'l-shape'
+      }
+    }
+
+    return 'straight'
+  }, [node, nodes])
+
+  const handleTypeChange = useCallback(
+    (value: StairTypeExtended) => {
+      if (!node || !selectedId) return
+
+      // For L-Shape and U-Shape, set stairType to 'straight' and recreate segments
+      if (value === 'l-shape' || value === 'u-shape') {
+        const presetSegments =
+          value === 'l-shape' ? L_STAIR_PRESET_SEGMENTS : U_STAIR_PRESET_SEGMENTS
+
+        // Delete existing child segments
+        const existingChildren = node.children ?? []
+        const sceneState = useScene.getState()
+        for (const childId of existingChildren) {
+          sceneState.deleteNode(childId as AnyNodeId)
+        }
+
+        // Create new segments from preset
+        const newSegments = createSegmentsFromPreset(presetSegments)
+        const newChildIds = newSegments.map((s) => s.id)
+
+        // Update stair node with new children and straight type
+        updateNode(selectedId as AnyNode['id'], {
+          stairType: 'straight',
+          children: newChildIds,
+        })
+
+        // Add new segment nodes
+        for (const seg of newSegments) {
+          createNode(seg, node.id as AnyNodeId)
+        }
+
+        return
+      }
+
+      // For standard types (straight, curved, spiral)
+      if (value === 'spiral' && node.stairType !== 'spiral') {
+        handleUpdate({
+          stairType: value,
+          sweepAngle: DEFAULT_SPIRAL_STAIR_SWEEP_ANGLE,
+          position: [node.position[0], 0, node.position[2]],
+        })
+      } else {
+        handleUpdate({ stairType: value as StairType })
+      }
+    },
+    [node, selectedId, handleUpdate, updateNode, createNode],
+  )
+
   const handleSelectSegment = useCallback(
     (segmentId: string) => {
       setSelection({ selectedIds: [segmentId as AnyNode['id']] })
@@ -209,19 +309,9 @@ export function StairPanel() {
     >
       <PanelSection title="Type">
         <SegmentedControl
-          onChange={(value) =>
-            handleUpdate(
-              value === 'spiral' && node.stairType !== 'spiral'
-                ? {
-                    stairType: value,
-                    sweepAngle: DEFAULT_SPIRAL_STAIR_SWEEP_ANGLE,
-                    position: [node.position[0], 0, node.position[2]],
-                  }
-                : { stairType: value },
-            )
-          }
+          onChange={(value) => handleTypeChange(value)}
           options={STAIR_TYPE_OPTIONS}
-          value={node.stairType ?? 'straight'}
+          value={getExtendedStairType()}
         />
       </PanelSection>
 
@@ -449,6 +539,26 @@ export function StairPanel() {
             step={0.02}
             unit="m"
             value={Math.round((node.railingHeight ?? 0.92) * 100) / 100}
+          />
+        )}
+      </PanelSection>
+
+      <PanelSection title="Support">
+        <SegmentedControl
+          onChange={(value) => handleUpdate({ supportType: value })}
+          options={SUPPORT_TYPE_OPTIONS}
+          value={node.supportType ?? 'filled'}
+        />
+        {(node.supportType === 'stringer' || node.supportType === 'wall-mounted') && (
+          <SliderControl
+            label="Thickness"
+            max={0.2}
+            min={0.02}
+            onChange={(value) => handleUpdate({ supportThickness: value })}
+            precision={2}
+            step={0.01}
+            unit="m"
+            value={Math.round((node.supportThickness ?? 0.05) * 100) / 100}
           />
         )}
       </PanelSection>
