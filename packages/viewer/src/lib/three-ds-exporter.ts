@@ -162,9 +162,9 @@ export class ThreeDSExporter {
       offset = writeUint32(view, offset, verticesChunkSize)
       offset = writeUint16(view, offset, vertexCount)
       for (let i = 0; i < vertexCount; i++) {
-        offset = writeFloat32(view, offset, data.vertices[i * 3])
-        offset = writeFloat32(view, offset, data.vertices[i * 3 + 1])
-        offset = writeFloat32(view, offset, data.vertices[i * 3 + 2])
+        offset = writeFloat32(view, offset, data.vertices[i * 3]!)
+        offset = writeFloat32(view, offset, data.vertices[i * 3 + 1]!)
+        offset = writeFloat32(view, offset, data.vertices[i * 3 + 2]!)
       }
 
       // FACES chunk
@@ -172,9 +172,9 @@ export class ThreeDSExporter {
       offset = writeUint32(view, offset, facesChunkSize)
       offset = writeUint16(view, offset, data.faceCount)
       for (let i = 0; i < data.faceCount; i++) {
-        offset = writeUint16(view, offset, data.faces[i * 3])
-        offset = writeUint16(view, offset, data.faces[i * 3 + 1])
-        offset = writeUint16(view, offset, data.faces[i * 3 + 2])
+        offset = writeUint16(view, offset, data.faces[i * 3]!)
+        offset = writeUint16(view, offset, data.faces[i * 3 + 1]!)
+        offset = writeUint16(view, offset, data.faces[i * 3 + 2]!)
         offset = writeUint16(view, offset, 0) // face flag
       }
     }
