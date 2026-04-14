@@ -118,10 +118,15 @@ export const CustomCameraControls = () => {
       shiftLeft: false,
       controlRight: false,
       controlLeft: false,
+      space: false,
     }
 
     const updateConfig = () => {
       if (!controls.current) return
+
+      const shift = keyState.shiftRight || keyState.shiftLeft
+      const control = keyState.controlRight || keyState.controlLeft
+      const space = keyState.space
 
       const wheelAction =
         cameraMode === 'orthographic'
@@ -133,6 +138,8 @@ export const CustomCameraControls = () => {
       if (isPreviewMode) {
         // In preview mode, left-click is always pan (viewer-style)
         controls.current.mouseButtons.left = CameraControlsImpl.ACTION.SCREEN_PAN
+      } else if (space) {
+        controls.current.mouseButtons.left = CameraControlsImpl.ACTION.SCREEN_PAN
       } else {
         controls.current.mouseButtons.left = CameraControlsImpl.ACTION.NONE
       }
@@ -140,21 +147,8 @@ export const CustomCameraControls = () => {
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.code === 'Space') {
-        event.preventDefault()
-        if (!controls.current) return
-
-        const currentPolarAngle = controls.current.polarAngle
-        const isTopView = currentPolarAngle < 0.1
-
-        if (isTopView) {
-          // Leave top view: go to perspective at 45°
-          controls.current.rotatePolarTo(Math.PI / 4, true)
-          useViewer.getState().setCameraMode('perspective')
-        } else {
-          // Go to top view: orthographic at 0°
-          controls.current.rotatePolarTo(0, true)
-          useViewer.getState().setCameraMode('orthographic')
-        }
+        keyState.space = true
+        document.body.style.cursor = 'grab'
       }
       if (event.code === 'ShiftRight') {
         keyState.shiftRight = true
@@ -172,6 +166,10 @@ export const CustomCameraControls = () => {
     }
 
     const onKeyUp = (event: KeyboardEvent) => {
+      if (event.code === 'Space') {
+        keyState.space = false
+        document.body.style.cursor = ''
+      }
       if (event.code === 'ShiftRight') {
         keyState.shiftRight = false
       }
