@@ -69,22 +69,22 @@ export function createDefaultMaterial(
 
 // Walls: warm off-white, matte plaster feel
 export const DEFAULT_WALL_MATERIAL = createMaterial({
-  properties: { color: '#f5f5f0', roughness: 0.85, metalness: 0 },
+  properties: { color: '#f5f5f0', roughness: 0.85, metalness: 0, opacity: 1, transparent: false, side: 'front' as const },
 })
 
 // Doors: warm wood tone
 export const DEFAULT_DOOR_MATERIAL = createMaterial({
-  properties: { color: '#8B6914', roughness: 0.65, metalness: 0 },
+  properties: { color: '#8B6914', roughness: 0.65, metalness: 0, opacity: 1, transparent: false, side: 'front' as const },
 })
 
 // Window frames: light metallic gray
 export const DEFAULT_WINDOW_FRAME_MATERIAL = createMaterial({
-  properties: { color: '#e8e8e8', roughness: 0.3, metalness: 0.6 },
+  properties: { color: '#e8e8e8', roughness: 0.3, metalness: 0.6, opacity: 1, transparent: false, side: 'front' as const },
 })
 
 // Window glass: subtle blue tint, very transparent
 export const DEFAULT_WINDOW_GLASS_MATERIAL = createMaterial({
-  properties: { color: '#b8d4e8', roughness: 0.05, metalness: 0.1, opacity: 0.25, transparent: true },
+  properties: { color: '#b8d4e8', roughness: 0.05, metalness: 0.1, opacity: 0.25, transparent: true, side: 'double' as const },
 })
 
 // Keep legacy alias for existing imports
@@ -92,17 +92,17 @@ export const DEFAULT_WINDOW_MATERIAL = DEFAULT_WINDOW_GLASS_MATERIAL
 
 // Slabs/floors: warm concrete tone
 export const DEFAULT_SLAB_MATERIAL = createMaterial({
-  properties: { color: '#d4cfc4', roughness: 0.75, metalness: 0 },
+  properties: { color: '#d4cfc4', roughness: 0.75, metalness: 0, opacity: 1, transparent: false, side: 'front' as const },
 })
 
 // Stairs: warm stone/concrete
 export const DEFAULT_STAIR_MATERIAL = createMaterial({
-  properties: { color: '#c8bfb0', roughness: 0.7, metalness: 0 },
+  properties: { color: '#c8bfb0', roughness: 0.7, metalness: 0, opacity: 1, transparent: false, side: 'front' as const },
 })
 
 // Ceilings: pure white, very matte
 export const DEFAULT_CEILING_MATERIAL = createMaterial({
-  properties: { color: '#fafafa', roughness: 0.95, metalness: 0 },
+  properties: { color: '#fafafa', roughness: 0.95, metalness: 0, opacity: 1, transparent: false, side: 'front' as const },
 })
 
 // Roof: neutral gray
