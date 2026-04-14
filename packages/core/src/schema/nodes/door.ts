@@ -18,9 +18,6 @@ export const DoorSegment = z.object({
 
 export type DoorSegment = z.infer<typeof DoorSegment>
 
-export const DoorStyle = z.enum(['single', 'double', 'sliding', 'pocket', 'bifold', 'barn'])
-export type DoorStyle = z.infer<typeof DoorStyle>
-
 export const DoorNode = BaseNode.extend({
   id: objectId('door'),
   type: nodeType('door'),
@@ -40,12 +37,6 @@ export const DoorNode = BaseNode.extend({
   frameDepth: z.number().default(0.07),
   threshold: z.boolean().default(true),
   thresholdHeight: z.number().default(0.02),
-
-  // Door style
-  doorStyle: DoorStyle.default('single'),
-  leafRatio: z.number().min(0.3).max(0.7).default(0.5), // for double doors
-  slideDirection: z.enum(['left', 'right']).default('left'), // for sliding/barn/pocket
-  foldPanels: z.number().min(2).max(6).default(4), // for bifold doors
 
   // Swing
   hingesSide: z.enum(['left', 'right']).default('left'),

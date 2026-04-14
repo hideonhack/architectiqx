@@ -26,12 +26,9 @@ import {
   DEFAULT_STAIR_RAILING_HEIGHT,
   DEFAULT_STAIR_RAILING_MODE,
   DEFAULT_STAIR_STEP_COUNT,
-  DEFAULT_STAIR_SUPPORT_THICKNESS,
-  DEFAULT_STAIR_SUPPORT_TYPE,
   DEFAULT_STAIR_THICKNESS,
   DEFAULT_STAIR_TYPE,
   DEFAULT_STAIR_WIDTH,
-  type StairPresetSegment,
 } from './stair-defaults'
 
 const GRID_OFFSET = 0.02
@@ -69,25 +66,6 @@ function createStairPreviewGeometry(): THREE.BufferGeometry {
   geometry.applyMatrix4(matrix)
 
   return geometry
-}
-
-/**
- * Creates stair segments from preset segment descriptors.
- */
-export function createSegmentsFromPreset(presetSegments: StairPresetSegment[]) {
-  return presetSegments.map((seg) =>
-    StairSegmentNode.parse({
-      segmentType: seg.segmentType,
-      width: seg.width,
-      length: seg.length,
-      height: seg.height,
-      stepCount: seg.stepCount,
-      attachmentSide: seg.attachmentSide,
-      fillToFloor: DEFAULT_STAIR_FILL_TO_FLOOR,
-      thickness: DEFAULT_STAIR_THICKNESS,
-      position: [0, 0, 0],
-    }),
-  )
 }
 
 /**
@@ -133,8 +111,6 @@ function commitStairPlacement(
     showStepSupports: DEFAULT_SPIRAL_SHOW_STEP_SUPPORTS,
     railingHeight: DEFAULT_STAIR_RAILING_HEIGHT,
     railingMode: DEFAULT_STAIR_RAILING_MODE,
-    supportType: DEFAULT_STAIR_SUPPORT_TYPE,
-    supportThickness: DEFAULT_STAIR_SUPPORT_THICKNESS,
     children: [segment.id],
   })
 
