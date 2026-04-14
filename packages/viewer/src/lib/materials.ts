@@ -1,5 +1,6 @@
 import { type MaterialProperties, type MaterialSchema, resolveMaterial } from '@pascal-app/core'
 import * as THREE from 'three'
+import { loadTexture } from './texture-loader'
 
 const sideMap: Record<MaterialProperties['side'], THREE.Side> = {
   front: THREE.FrontSide,
@@ -9,13 +10,21 @@ const sideMap: Record<MaterialProperties['side'], THREE.Side> = {
 
 const materialCache = new Map<string, THREE.MeshStandardMaterial>()
 
-function getCacheKey(props: MaterialProperties): string {
-  return `${props.color}-${props.roughness}-${props.metalness}-${props.opacity}-${props.transparent}-${props.side}`
+function getCacheKey(props: MaterialProperties, textureUrl?: string, textureRepeat?: [number, number]): string {
+  const base = `${props.color}-${props.roughness}-${props.metalness}-${props.opacity}-${props.transparent}-${props.side}`
+  if (textureUrl) {
+    const r = textureRepeat || [1, 1]
+    return `${base}-tex:${textureUrl}-${r[0]}-${r[1]}`
+  }
+  return base
 }
 
 export function createMaterial(material?: MaterialSchema): THREE.MeshStandardMaterial {
   const props = resolveMaterial(material)
-  const cacheKey = getCacheKey(props)
+  const textureUrl = material?.texture?.url
+  const textureRepeat = material?.texture?.repeat as [number, number] | undefined
+  const textureScale = material?.texture?.scale
+  const cacheKey = getCacheKey(props, textureUrl, textureRepeat)
 
   if (materialCache.has(cacheKey)) {
     return materialCache.get(cacheKey)!
@@ -29,6 +38,18 @@ export function createMaterial(material?: MaterialSchema): THREE.MeshStandardMat
     transparent: props.transparent,
     side: sideMap[props.side],
   })
+
+  if (textureUrl) {
+    const repeat: [number, number] = textureRepeat || [1, 1]
+    const scaledRepeat: [number, number] = textureScale
+      ? [repeat[0] * textureScale, repeat[1] * textureScale]
+      : repeat
+    const texture = loadTexture(textureUrl, scaledRepeat)
+    if (texture) {
+      threeMaterial.map = texture
+      threeMaterial.needsUpdate = true
+    }
+  }
 
   materialCache.set(cacheKey, threeMaterial)
   return threeMaterial
