@@ -55,6 +55,7 @@ import { Grid } from './grid'
 import { PresetThumbnailGenerator } from './preset-thumbnail-generator'
 import { SelectionManager } from './selection-manager'
 import { SiteEdgeLabels } from './site-edge-labels'
+import { TopViewIndicators } from './topview-indicators'
 import { type SnapshotCameraData, ThumbnailGenerator } from './thumbnail-generator'
 import { WallMeasurementLabel } from './wall-measurement-label'
 
@@ -534,6 +535,7 @@ const ViewerSceneContent = memo(function ViewerSceneContent({
       <ThumbnailGenerator onThumbnailCapture={onThumbnailCapture} />
       <PresetThumbnailGenerator />
       {!isFirstPersonMode && <SiteEdgeLabels />}
+      {!isFirstPersonMode && <TopViewIndicators />}
       {isFirstPersonMode && <InteractiveSystem />}
     </>
   )
