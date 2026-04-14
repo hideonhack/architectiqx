@@ -519,7 +519,7 @@ const ViewerSceneContent = memo(function ViewerSceneContent({
   return (
     <>
       {!isFirstPersonMode && <SelectionManager />}
-      {!isFirstPersonMode && <ResizeHandles />}
+      {/* {!isFirstPersonMode && <ResizeHandles />} */}
       {!isVersionPreviewMode && !isFirstPersonMode && <BoxSelectTool />}
       {!isVersionPreviewMode && !isFirstPersonMode && <FloatingActionMenu />}
       {!isVersionPreviewMode && !isFirstPersonMode && <FloatingBuildingActionMenu />}
@@ -532,14 +532,14 @@ const ViewerSceneContent = memo(function ViewerSceneContent({
       {!isLoading && !isFirstPersonMode && (
         <Grid cellColor="#aaa" fadeDistance={500} sectionColor="#ccc" />
       )}
-      {!isLoading && !isFirstPersonMode && <SnapGuides />}
+      {/* {!isLoading && !isFirstPersonMode && <SnapGuides />} */}
       {!(isLoading || isVersionPreviewMode) && !isFirstPersonMode && <ToolManager />}
       {isFirstPersonMode && <FirstPersonControls />}
       <CustomCameraControls />
       <ThumbnailGenerator onThumbnailCapture={onThumbnailCapture} />
       <PresetThumbnailGenerator />
       {!isFirstPersonMode && <SiteEdgeLabels />}
-      {!isFirstPersonMode && <TopViewIndicators />}
+      {/* {!isFirstPersonMode && <TopViewIndicators />} */}
       {isFirstPersonMode && <InteractiveSystem />}
     </>
   )
