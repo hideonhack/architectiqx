@@ -27,7 +27,7 @@ export const ExportSystem = () => {
   const setExportScene = useViewer((state) => state.setExportScene)
 
   useEffect(() => {
-    const exportFn = async (format: 'glb' | 'stl' | 'obj' = 'glb') => {
+    const exportFn = async (format: 'glb' | 'stl' | 'obj' | '3ds' = 'glb') => {
       const date = new Date().toISOString().split('T')[0]
       const filename = `pascal-export-${date}`
 
@@ -62,6 +62,11 @@ export const ExportSystem = () => {
         const exporter = new OBJExporter()
         const result = exporter.parse(exportRoot)
         downloadBlob(new Blob([result], { type: 'model/obj' }), `${filename}.obj`)
+      } else if (format === '3ds') {
+        const { ThreeDSExporter } = await import('../../lib/three-ds-exporter')
+        const exporter = new ThreeDSExporter()
+        const result = exporter.parse(exportRoot)
+        downloadBlob(new Blob([result]), `${filename}.3ds`)
       }
     }
 

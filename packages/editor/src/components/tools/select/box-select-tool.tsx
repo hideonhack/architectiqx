@@ -368,7 +368,7 @@ function setSnappedPoint(target: Vector3, x: number, y: number, z: number) {
 export const BoxSelectTool: React.FC = () => {
   const mode = useEditor((s) => s.mode)
   const selectionTool = useEditor((s) => s.floorplanSelectionTool)
-  const isActive = mode === 'select' && selectionTool === 'marquee'
+  const isActive = mode === 'select'
 
   if (!isActive) return null
 
@@ -461,6 +461,10 @@ const BoxSelectToolInner: React.FC = () => {
     const onCanvasPointerDown = (e: PointerEvent) => {
       if (e.button !== 0) return
       if (useViewer.getState().cameraDragging) return
+
+      // In click mode, only start box select when Shift is held
+      const currentTool = useEditor.getState().floorplanSelectionTool
+      if (currentTool === 'click' && !e.shiftKey) return
 
       const point = raycastToGround(e)
       if (!point) return
