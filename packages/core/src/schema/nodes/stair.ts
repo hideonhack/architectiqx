@@ -7,10 +7,12 @@ import { StairSegmentNode } from './stair-segment'
 export const StairRailingMode = z.enum(['none', 'left', 'right', 'both'])
 export const StairType = z.enum(['straight', 'curved', 'spiral'])
 export const StairTopLandingMode = z.enum(['none', 'integrated'])
+export const StairSupportType = z.enum(['none', 'filled', 'stringer', 'wall-mounted'])
 
 export type StairRailingMode = z.infer<typeof StairRailingMode>
 export type StairType = z.infer<typeof StairType>
 export type StairTopLandingMode = z.infer<typeof StairTopLandingMode>
+export type StairSupportType = z.infer<typeof StairSupportType>
 
 export const StairNode = BaseNode.extend({
   id: objectId('stair'),
@@ -33,6 +35,9 @@ export const StairNode = BaseNode.extend({
   showStepSupports: z.boolean().default(true),
   railingMode: StairRailingMode.default('none'),
   railingHeight: z.number().default(0.92),
+  // Structural support
+  supportType: StairSupportType.default('filled'),
+  supportThickness: z.number().default(0.05),
   // Child stair segment IDs
   children: z.array(StairSegmentNode.shape.id).default([]),
 }).describe(
@@ -56,6 +61,8 @@ export const StairNode = BaseNode.extend({
   - showStepSupports: whether spiral stairs render step support brackets
   - railingMode: whether to render railings and on which side(s)
   - railingHeight: top height of the railing above the stair surface
+  - supportType: structural support style (none, filled, stringer, wall-mounted)
+  - supportThickness: thickness of the structural support element
   - children: array of StairSegmentNode IDs for straight stairs
   `,
 )

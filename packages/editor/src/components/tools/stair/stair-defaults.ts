@@ -15,3 +15,30 @@ export const DEFAULT_SPIRAL_SHOW_CENTER_COLUMN = true
 export const DEFAULT_SPIRAL_SHOW_STEP_SUPPORTS = true
 export const DEFAULT_STAIR_RAILING_MODE = 'right' as const
 export const DEFAULT_STAIR_RAILING_HEIGHT = 0.92
+export const DEFAULT_STAIR_SUPPORT_TYPE = 'filled' as const
+export const DEFAULT_STAIR_SUPPORT_THICKNESS = 0.05
+
+/**
+ * Preset segment configurations for L-shaped and U-shaped staircases.
+ * Each preset is an array of segment descriptors used to create child StairSegmentNodes.
+ */
+export type StairPresetSegment = {
+  segmentType: 'stair' | 'landing'
+  width: number
+  length: number
+  height: number
+  stepCount: number
+  attachmentSide: 'front' | 'left' | 'right'
+}
+
+export const L_STAIR_PRESET_SEGMENTS: StairPresetSegment[] = [
+  { segmentType: 'stair', width: 1.0, length: 2.0, height: 1.25, stepCount: 5, attachmentSide: 'front' },
+  { segmentType: 'landing', width: 1.0, length: 1.0, height: 0, stepCount: 0, attachmentSide: 'front' },
+  { segmentType: 'stair', width: 1.0, length: 2.0, height: 1.25, stepCount: 5, attachmentSide: 'left' },
+]
+
+export const U_STAIR_PRESET_SEGMENTS: StairPresetSegment[] = [
+  { segmentType: 'stair', width: 1.0, length: 2.0, height: 1.25, stepCount: 5, attachmentSide: 'front' },
+  { segmentType: 'landing', width: 2.0, length: 1.0, height: 0, stepCount: 0, attachmentSide: 'front' },
+  { segmentType: 'stair', width: 1.0, length: 2.0, height: 1.25, stepCount: 5, attachmentSide: 'left' },
+]

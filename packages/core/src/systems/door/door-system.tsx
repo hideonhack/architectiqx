@@ -85,6 +85,10 @@ function updateDoorMesh(node: DoorNode, mesh: THREE.Mesh) {
     panicBarHeight,
     contentPadding,
     hingesSide,
+    doorStyle = 'single',
+    leafRatio = 0.5,
+    slideDirection = 'left',
+    foldPanels = 4,
   } = node
 
   // Leaf occupies the full opening (no bottom frame bar — door opens to floor)
@@ -143,118 +147,198 @@ function updateDoorMesh(node: DoorNode, mesh: THREE.Mesh) {
     )
   }
 
-  // ── Leaf — contentPadding border strips (no full backing; glass areas are open) ──
-  const cpX = contentPadding[0]
-  const cpY = contentPadding[1]
-  if (cpY > 0) {
-    // Top strip
-    addBox(mesh, baseMaterial, leafW, cpY, leafDepth, 0, leafCenterY + leafH / 2 - cpY / 2, 0)
-    // Bottom strip
-    addBox(mesh, baseMaterial, leafW, cpY, leafDepth, 0, leafCenterY - leafH / 2 + cpY / 2, 0)
-  }
-  if (cpX > 0) {
-    const innerH = leafH - 2 * cpY
-    // Left strip
-    addBox(mesh, baseMaterial, cpX, innerH, leafDepth, -leafW / 2 + cpX / 2, leafCenterY, 0)
-    // Right strip
-    addBox(mesh, baseMaterial, cpX, innerH, leafDepth, leafW / 2 - cpX / 2, leafCenterY, 0)
-  }
-
-  // Content area inside padding
-  const contentW = leafW - 2 * cpX
-  const contentH = leafH - 2 * cpY
-
-  // ── Segments (stacked top to bottom within content area) ──
-  const totalRatio = segments.reduce((sum, s) => sum + s.heightRatio, 0)
-  const contentTop = leafCenterY + contentH / 2
-
-  let segY = contentTop
-  for (const seg of segments) {
-    const segH = (seg.heightRatio / totalRatio) * contentH
-    const segCenterY = segY - segH / 2
-
-    const numCols = seg.columnRatios.length
-    const colSum = seg.columnRatios.reduce((a, b) => a + b, 0)
-    const usableW = contentW - (numCols - 1) * seg.dividerThickness
-    const colWidths = seg.columnRatios.map((r) => (r / colSum) * usableW)
-
-    // Column x-centers (relative to mesh center)
-    const colXCenters: number[] = []
-    let cx = -contentW / 2
-    for (let c = 0; c < numCols; c++) {
-      colXCenters.push(cx + colWidths[c]! / 2)
-      cx += colWidths[c]!
-      if (c < numCols - 1) cx += seg.dividerThickness
+  // ── Helper: build a single leaf with segments at given offset ──
+  const buildLeaf = (lw: number, offsetX: number, offsetZ: number) => {
+    const cpX = contentPadding[0]
+    const cpY = contentPadding[1]
+    if (cpY > 0) {
+      addBox(mesh, baseMaterial, lw, cpY, leafDepth, offsetX, leafCenterY + leafH / 2 - cpY / 2, offsetZ)
+      addBox(mesh, baseMaterial, lw, cpY, leafDepth, offsetX, leafCenterY - leafH / 2 + cpY / 2, offsetZ)
+    }
+    if (cpX > 0) {
+      const innerH = leafH - 2 * cpY
+      addBox(mesh, baseMaterial, cpX, innerH, leafDepth, offsetX - lw / 2 + cpX / 2, leafCenterY, offsetZ)
+      addBox(mesh, baseMaterial, cpX, innerH, leafDepth, offsetX + lw / 2 - cpX / 2, leafCenterY, offsetZ)
     }
 
-    // Column dividers within this segment
-    cx = -contentW / 2
-    for (let c = 0; c < numCols - 1; c++) {
-      cx += colWidths[c]!
-      addBox(
-        mesh,
-        baseMaterial,
-        seg.dividerThickness,
-        segH,
-        leafDepth + 0.001,
-        cx + seg.dividerThickness / 2,
-        segCenterY,
-        0,
-      )
-      cx += seg.dividerThickness
-    }
+    const contentW = lw - 2 * cpX
+    const contentH = leafH - 2 * cpY
+    const totalRatio = segments.reduce((sum, s) => sum + s.heightRatio, 0)
+    const contentTop = leafCenterY + contentH / 2
 
-    // Segment content per column
-    for (let c = 0; c < numCols; c++) {
-      const colW = colWidths[c]!
-      const colX = colXCenters[c]!
+    let segY = contentTop
+    for (const seg of segments) {
+      const segH = (seg.heightRatio / totalRatio) * contentH
+      const segCenterY = segY - segH / 2
 
-      if (seg.type === 'glass') {
-        // Glass only — no opaque backing so it's truly transparent
-        const glassDepth = Math.max(0.004, leafDepth * 0.15)
-        addBox(mesh, glassMaterial, colW, segH, glassDepth, colX, segCenterY, 0)
-      } else if (seg.type === 'panel') {
-        // Opaque leaf backing for this column
-        addBox(mesh, baseMaterial, colW, segH, leafDepth, colX, segCenterY, 0)
-        // Raised panel detail
-        const panelW = colW - 2 * seg.panelInset
-        const panelH = segH - 2 * seg.panelInset
-        if (panelW > 0.01 && panelH > 0.01) {
-          const effectiveDepth = Math.abs(seg.panelDepth) < 0.002 ? 0.005 : Math.abs(seg.panelDepth)
-          const panelZ = leafDepth / 2 + effectiveDepth / 2
-          addBox(mesh, baseMaterial, panelW, panelH, effectiveDepth, colX, segCenterY, panelZ)
-        }
-      } else {
-        // 'empty' — opaque backing, no detail
-        addBox(mesh, baseMaterial, colW, segH, leafDepth, colX, segCenterY, 0)
+      const numCols = seg.columnRatios.length
+      const colSum = seg.columnRatios.reduce((a, b) => a + b, 0)
+      const usableW = contentW - (numCols - 1) * seg.dividerThickness
+      const colWidths = seg.columnRatios.map((r) => (r / colSum) * usableW)
+
+      const colXCenters: number[] = []
+      let cx = -contentW / 2
+      for (let c = 0; c < numCols; c++) {
+        colXCenters.push(offsetX + cx + colWidths[c]! / 2)
+        cx += colWidths[c]!
+        if (c < numCols - 1) cx += seg.dividerThickness
       }
-    }
 
-    segY -= segH
+      cx = -contentW / 2
+      for (let c = 0; c < numCols - 1; c++) {
+        cx += colWidths[c]!
+        addBox(
+          mesh,
+          baseMaterial,
+          seg.dividerThickness,
+          segH,
+          leafDepth + 0.001,
+          offsetX + cx + seg.dividerThickness / 2,
+          segCenterY,
+          offsetZ,
+        )
+        cx += seg.dividerThickness
+      }
+
+      for (let c = 0; c < numCols; c++) {
+        const colW = colWidths[c]!
+        const colX = colXCenters[c]!
+
+        if (seg.type === 'glass') {
+          const glassDepth = Math.max(0.004, leafDepth * 0.15)
+          addBox(mesh, glassMaterial, colW, segH, glassDepth, colX, segCenterY, offsetZ)
+        } else if (seg.type === 'panel') {
+          addBox(mesh, baseMaterial, colW, segH, leafDepth, colX, segCenterY, offsetZ)
+          const panelW = colW - 2 * seg.panelInset
+          const panelH = segH - 2 * seg.panelInset
+          if (panelW > 0.01 && panelH > 0.01) {
+            const effectiveDepth = Math.abs(seg.panelDepth) < 0.002 ? 0.005 : Math.abs(seg.panelDepth)
+            const panelZ = offsetZ + leafDepth / 2 + effectiveDepth / 2
+            addBox(mesh, baseMaterial, panelW, panelH, effectiveDepth, colX, segCenterY, panelZ)
+          }
+        } else {
+          addBox(mesh, baseMaterial, colW, segH, leafDepth, colX, segCenterY, offsetZ)
+        }
+      }
+
+      segY -= segH
+    }
+  }
+
+  // ── Helper: add 3 hinges at given X ──
+  const buildHinges = (hingeX: number) => {
+    const hingeZ = 0
+    const hingeH = 0.1
+    const hingeW = 0.024
+    const hingeD = leafDepth + 0.016
+    const leafBottom = leafCenterY - leafH / 2
+    const leafTop = leafCenterY + leafH / 2
+    addBox(mesh, baseMaterial, hingeW, hingeH, hingeD, hingeX, leafBottom + 0.25, hingeZ)
+    addBox(mesh, baseMaterial, hingeW, hingeH, hingeD, hingeX, (leafBottom + leafTop) / 2, hingeZ)
+    addBox(mesh, baseMaterial, hingeW, hingeH, hingeD, hingeX, leafTop - 0.25, hingeZ)
+  }
+
+  // ── Build leaves based on door style ──
+  const isSwingStyle = doorStyle === 'single' || doorStyle === 'double'
+
+  if (doorStyle === 'double') {
+    // Two leaves with a small gap
+    const gap = 0.005
+    const leftW = leafW * leafRatio - gap / 2
+    const rightW = leafW * (1 - leafRatio) - gap / 2
+    const leftX = -leafW / 2 + leftW / 2
+    const rightX = leafW / 2 - rightW / 2
+
+    buildLeaf(leftW, leftX, 0)
+    buildLeaf(rightW, rightX, 0)
+
+    // Left leaf hinges on left side
+    buildHinges(-leafW / 2 + 0.012)
+    // Right leaf hinges on right side
+    buildHinges(leafW / 2 - 0.012)
+  } else if (doorStyle === 'sliding' || doorStyle === 'pocket') {
+    // Leaf sits slightly in front of the wall plane
+    const slideZ = frameDepth / 2 + leafDepth / 2 + 0.005
+    buildLeaf(leafW, 0, slideZ)
+
+    // Rail track at the top
+    const railW = doorStyle === 'pocket' ? leafW : leafW
+    addBox(mesh, baseMaterial, railW, 0.02, 0.04, 0, leafCenterY + leafH / 2 + 0.01, slideZ)
+    // No hinges for sliding/pocket
+  } else if (doorStyle === 'barn') {
+    // Leaf in front of wall
+    const slideZ = frameDepth / 2 + leafDepth / 2 + 0.005
+    buildLeaf(leafW, 0, slideZ)
+
+    // Exposed rail with overhang
+    const railOverhang = 0.3
+    const railW = leafW + railOverhang * 2
+    const railY = leafCenterY + leafH / 2 + 0.025
+    addBox(mesh, baseMaterial, railW, 0.03, 0.05, 0, railY, slideZ)
+
+    // Two roller cylinders on top of the leaf
+    const rollerR = 0.02
+    const rollerSpacing = leafW * 0.3
+    for (const sign of [-1, 1]) {
+      const rollerX = sign * rollerSpacing
+      const rollerGeo = new THREE.CylinderGeometry(rollerR, rollerR, 0.03, 12)
+      rollerGeo.rotateX(Math.PI / 2) // orient along Z
+      const rollerMesh = new THREE.Mesh(rollerGeo, baseMaterial)
+      rollerMesh.position.set(rollerX, railY, slideZ)
+      mesh.add(rollerMesh)
+    }
+    // No hinges for barn
+  } else if (doorStyle === 'bifold') {
+    // Multiple panels of equal width
+    const panelCount = foldPanels
+    const panelW = leafW / panelCount
+    for (let p = 0; p < panelCount; p++) {
+      const px = -leafW / 2 + panelW / 2 + p * panelW
+      buildLeaf(panelW, px, 0)
+
+      // Alternating hinge positions (left-right-left-right)
+      const hingeOnLeft = p % 2 === 0
+      const hingeX = hingeOnLeft ? px - panelW / 2 + 0.012 : px + panelW / 2 - 0.012
+      buildHinges(hingeX)
+    }
+  } else {
+    // 'single' (default) — original behavior
+    buildLeaf(leafW, 0, 0)
+    buildHinges(hingesSide === 'right' ? leafW / 2 - 0.012 : -leafW / 2 + 0.012)
   }
 
   // ── Handle ──
   if (handle) {
-    // Convert from floor-based height to mesh-center-based Y
     const handleY = handleHeight - height / 2
-    // Handle grip sits on the front face (+Z) of the leaf
-    const faceZ = leafDepth / 2
+    const leafZ = (doorStyle === 'sliding' || doorStyle === 'pocket' || doorStyle === 'barn')
+      ? frameDepth / 2 + leafDepth / 2 + 0.005
+      : 0
+    const faceZ = leafZ + leafDepth / 2
 
-    // X position: handleSide refers to which side the grip is on
-    const handleX = handleSide === 'right' ? leafW / 2 - 0.045 : -leafW / 2 + 0.045
-
-    // Backplate
-    addBox(mesh, baseMaterial, 0.028, 0.14, 0.01, handleX, handleY, faceZ + 0.005)
-    // Grip lever
-    addBox(mesh, baseMaterial, 0.022, 0.1, 0.035, handleX, handleY, faceZ + 0.025)
+    if (doorStyle === 'double') {
+      // Handles on both leaves near the center gap
+      const gap = 0.005
+      const leftW = leafW * leafRatio - gap / 2
+      const rightW = leafW * (1 - leafRatio) - gap / 2
+      const leftHandleX = -leafW / 2 + leftW - 0.045
+      const rightHandleX = leafW / 2 - rightW + 0.045
+      // Left leaf handle
+      addBox(mesh, baseMaterial, 0.028, 0.14, 0.01, leftHandleX, handleY, faceZ + 0.005)
+      addBox(mesh, baseMaterial, 0.022, 0.1, 0.035, leftHandleX, handleY, faceZ + 0.025)
+      // Right leaf handle
+      addBox(mesh, baseMaterial, 0.028, 0.14, 0.01, rightHandleX, handleY, faceZ + 0.005)
+      addBox(mesh, baseMaterial, 0.022, 0.1, 0.035, rightHandleX, handleY, faceZ + 0.025)
+    } else {
+      const handleX = handleSide === 'right' ? leafW / 2 - 0.045 : -leafW / 2 + 0.045
+      addBox(mesh, baseMaterial, 0.028, 0.14, 0.01, handleX, handleY, faceZ + 0.005)
+      addBox(mesh, baseMaterial, 0.022, 0.1, 0.035, handleX, handleY, faceZ + 0.025)
+    }
   }
 
   // ── Door closer (commercial hardware at top) ──
   if (doorCloser) {
     const closerY = leafCenterY + leafH / 2 - 0.04
-    // Body
     addBox(mesh, baseMaterial, 0.28, 0.055, 0.055, 0, closerY, leafDepth / 2 + 0.03)
-    // Arm (simplified as thin bar to frame side)
     addBox(
       mesh,
       baseMaterial,
@@ -273,22 +357,7 @@ function updateDoorMesh(node: DoorNode, mesh: THREE.Mesh) {
     addBox(mesh, baseMaterial, leafW * 0.72, 0.04, 0.055, 0, barY, leafDepth / 2 + 0.03)
   }
 
-  // ── Hinges (3 knuckle-style hinges on the hinge side) ──
-  {
-    const hingeX = hingesSide === 'right' ? leafW / 2 - 0.012 : -leafW / 2 + 0.012
-    const hingeZ = 0 // centered in leaf depth
-    const hingeH = 0.1
-    const hingeW = 0.024
-    const hingeD = leafDepth + 0.016
-    // Bottom hinge ~0.25m from floor, middle hinge, top hinge ~0.25m from top
-    const leafBottom = leafCenterY - leafH / 2
-    const leafTop = leafCenterY + leafH / 2
-    addBox(mesh, baseMaterial, hingeW, hingeH, hingeD, hingeX, leafBottom + 0.25, hingeZ)
-    addBox(mesh, baseMaterial, hingeW, hingeH, hingeD, hingeX, (leafBottom + leafTop) / 2, hingeZ)
-    addBox(mesh, baseMaterial, hingeW, hingeH, hingeD, hingeX, leafTop - 0.25, hingeZ)
-  }
-
-  // ── Cutout (for wall CSG) — always full door dimensions, 1m deep ──
+  // ── Cutout (for wall CSG) ──
   let cutout = mesh.getObjectByName('cutout') as THREE.Mesh | undefined
   if (!cutout) {
     cutout = new THREE.Mesh()
@@ -296,6 +365,12 @@ function updateDoorMesh(node: DoorNode, mesh: THREE.Mesh) {
     mesh.add(cutout)
   }
   cutout.geometry.dispose()
-  cutout.geometry = new THREE.BoxGeometry(node.width, node.height, 1.0)
+  // Pocket doors need a wider cutout so the leaf can slide into the wall
+  const cutoutWidth = doorStyle === 'pocket' ? node.width * 2 : node.width
+  const cutoutOffsetX = doorStyle === 'pocket'
+    ? (slideDirection === 'left' ? -node.width / 2 : node.width / 2)
+    : 0
+  cutout.geometry = new THREE.BoxGeometry(cutoutWidth, node.height, 1.0)
+  cutout.position.set(cutoutOffsetX, 0, 0)
   cutout.visible = false
 }
