@@ -337,14 +337,6 @@ export function SettingsPanel({
           <Download className="size-4" />
           Export OBJ
         </Button>
-        <Button
-          className="w-full justify-start gap-2"
-          onClick={() => exportScene?.('3ds')}
-          variant="outline"
-        >
-          <Download className="size-4" />
-          Export 3DS
-        </Button>
       </div>
 
       {/* Thumbnail Section (only for cloud projects) */}

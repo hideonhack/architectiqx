@@ -2,8 +2,6 @@
 
 import { DEFAULT_MATERIALS, type MaterialPreset, type MaterialSchema } from '@pascal-app/core'
 import { useState } from 'react'
-import type { TextureEntry } from '../../../lib/texture-library'
-import { TexturePicker } from './texture-picker'
 
 const PRESET_COLORS: Record<MaterialPreset, string> = {
   white: '#ffffff',
@@ -191,30 +189,6 @@ export function MaterialPicker({ value, onChange }: MaterialPickerProps) {
           </div>
         </div>
       )}
-
-      <div className="border-gray-200 border-t pt-3">
-        <TexturePicker
-          selectedTextureUrl={value?.texture?.url}
-          onSelect={(texture: TextureEntry) => {
-            onChange({
-              ...value,
-              preset: value?.preset || currentPreset,
-              properties: showCustom ? currentProps : undefined,
-              texture: {
-                url: texture.url,
-                repeat: texture.repeat,
-              },
-            })
-          }}
-          onRemove={() => {
-            const { texture: _removed, ...rest } = value || {}
-            onChange({
-              ...rest,
-              preset: rest.preset || currentPreset,
-            })
-          }}
-        />
-      </div>
     </div>
   )
 }

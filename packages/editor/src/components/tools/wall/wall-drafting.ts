@@ -1,8 +1,6 @@
 import { useScene, type WallNode, WallNode as WallSchema } from '@pascal-app/core'
 import { useViewer } from '@pascal-app/viewer'
 import { sfxEmitter } from '../../../lib/sfx-bus'
-import { useSnapGuides } from '../../../store/use-snap-guides'
-import type { SnapGuide } from '../../../lib/snap-engine'
 
 export type WallPlanPoint = [number, number]
 
@@ -96,8 +94,6 @@ export function findWallSnapTarget(
   return bestTarget
 }
 
-const WALL_AXIS_SNAP_THRESHOLD = 0.15
-
 export function snapWallDraftPoint(args: {
   point: WallPlanPoint
   walls: WallNode[]
@@ -106,83 +102,13 @@ export function snapWallDraftPoint(args: {
   ignoreWallIds?: string[]
 }): WallPlanPoint {
   const { point, walls, start, angleSnap = false, ignoreWallIds } = args
-  const ignoreSet = new Set(ignoreWallIds ?? [])
   const basePoint = start && angleSnap ? snapPointTo45Degrees(start, point) : snapPointToGrid(point)
 
-  // First check the existing endpoint/projection snap
-  const endpointSnap = findWallSnapTarget(basePoint, walls, {
-    ignoreWallIds,
-  })
-
-  if (endpointSnap) {
-    useSnapGuides.getState().clearGuides()
-    return endpointSnap
-  }
-
-  // If no endpoint snap, check axis alignment with wall corners and midpoints
-  let snapX: number | null = null
-  let snapZ: number | null = null
-  let bestDeltaX = WALL_AXIS_SNAP_THRESHOLD
-  let bestDeltaZ = WALL_AXIS_SNAP_THRESHOLD
-  let alignTargetX: WallPlanPoint | null = null
-  let alignTargetZ: WallPlanPoint | null = null
-
-  for (const wall of walls) {
-    if (ignoreSet.has(wall.id)) continue
-
-    const midpoint: WallPlanPoint = [
-      (wall.start[0] + wall.end[0]) / 2,
-      (wall.start[1] + wall.end[1]) / 2,
-    ]
-    const checkpoints = [wall.start, wall.end, midpoint]
-
-    for (const cp of checkpoints) {
-      const dx = Math.abs(cp[0] - basePoint[0])
-      const dz = Math.abs(cp[1] - basePoint[1])
-
-      if (dx < bestDeltaX) {
-        bestDeltaX = dx
-        snapX = cp[0]
-        alignTargetX = cp
-      }
-      if (dz < bestDeltaZ) {
-        bestDeltaZ = dz
-        snapZ = cp[1]
-        alignTargetZ = cp
-      }
-    }
-  }
-
-  const snappedPoint: WallPlanPoint = [snapX ?? basePoint[0], snapZ ?? basePoint[1]]
-  const guides: SnapGuide[] = []
-
-  if (snapX !== null && alignTargetX) {
-    const minZ = Math.min(snappedPoint[1], alignTargetX[1])
-    const maxZ = Math.max(snappedPoint[1], alignTargetX[1])
-    guides.push({
-      from: [snapX, 0.05, minZ - 0.5],
-      to: [snapX, 0.05, maxZ + 0.5],
-      axis: 'x',
-    })
-  }
-
-  if (snapZ !== null && alignTargetZ) {
-    const minX = Math.min(snappedPoint[0], alignTargetZ[0])
-    const maxX = Math.max(snappedPoint[0], alignTargetZ[0])
-    guides.push({
-      from: [minX - 0.5, 0.05, snapZ],
-      to: [maxX + 0.5, 0.05, snapZ],
-      axis: 'z',
-    })
-  }
-
-  if (guides.length > 0) {
-    useSnapGuides.getState().setGuides(guides)
-  } else {
-    useSnapGuides.getState().clearGuides()
-  }
-
-  return snappedPoint
+  return (
+    findWallSnapTarget(basePoint, walls, {
+      ignoreWallIds,
+    }) ?? basePoint
+  )
 }
 
 export function isWallLongEnough(start: WallPlanPoint, end: WallPlanPoint): boolean {

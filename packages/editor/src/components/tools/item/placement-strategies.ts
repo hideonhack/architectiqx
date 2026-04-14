@@ -11,9 +11,6 @@ import type {
 } from '@pascal-app/core'
 import { getScaledDimensions, sceneRegistry, useScene } from '@pascal-app/core'
 import { Vector3 } from 'three'
-import type { Vector3Tuple } from 'three'
-import { collectSnapTargets, findSnap } from '../../../lib/snap-engine'
-import { useSnapGuides } from '../../../store/use-snap-guides'
 import {
   calculateCursorRotation,
   calculateItemRotation,
@@ -54,82 +51,8 @@ export const floorStrategy = {
     const swapDims = Math.abs(Math.sin(rotY)) > 0.9
     // event.localPosition is building-local; the coordinator cursor group is inside the
     // building-local ToolManager group, so local coords are correct for both data and visuals.
-    let x = snapToGrid(event.localPosition[0], swapDims ? dimZ : dimX)
-    let z = snapToGrid(event.localPosition[2], swapDims ? dimX : dimZ)
-
-    // --- Smart object snapping ---
-    if (ctx.draftItem && ctx.levelId) {
-      const nodes = useScene.getState().nodes
-      const snapNodes = new Map<string, { position: Vector3Tuple; width: number; depth: number }>()
-      for (const [id, node] of Object.entries(nodes)) {
-        if (node.type !== 'item') continue
-        const item = node as ItemNode
-        // Only items on the same level, excluding the draft item
-        if (item.parentId !== ctx.levelId) continue
-        if (id === ctx.draftItem.id) continue
-        // Only floor items (no attachTo)
-        if (item.asset.attachTo) continue
-        const itemDims = getScaledDimensions(item)
-        snapNodes.set(id, {
-          position: item.position as Vector3Tuple,
-          width: itemDims[0],
-          depth: itemDims[2],
-        })
-      }
-
-      // Also add the current item's snap points (using its dims)
-      const currentDims = getScaledDimensions(ctx.draftItem)
-      const currentHw = currentDims[0] / 2
-      const currentHd = currentDims[2] / 2
-
-      // Collect targets from other items
-      const targets = collectSnapTargets(snapNodes, ctx.draftItem.id)
-
-      // Build snap points for the dragged item (center + corners + edge-centers)
-      // and test each against targets, picking the best snap
-      const testPoints: Vector3Tuple[] = [
-        [x, 0, z], // center
-        [x - currentHw, 0, z - currentHd], // corners
-        [x + currentHw, 0, z - currentHd],
-        [x - currentHw, 0, z + currentHd],
-        [x + currentHw, 0, z + currentHd],
-        [x, 0, z - currentHd], // edge centers
-        [x, 0, z + currentHd],
-        [x - currentHw, 0, z],
-        [x + currentHw, 0, z],
-      ]
-
-      let bestSnapResult = findSnap([x, 0, z], targets)
-      // Check all anchor points and keep the one with the tightest snap
-      for (const tp of testPoints) {
-        const result = findSnap(tp, targets)
-        if (result.snapped) {
-          // Calculate the offset this snap would apply to the center
-          const offsetX = result.snappedPosition[0] - tp[0]
-          const offsetZ = result.snappedPosition[2] - tp[2]
-          const totalDelta = Math.abs(offsetX) + Math.abs(offsetZ)
-          const bestDelta =
-            Math.abs(bestSnapResult.snappedPosition[0] - x) +
-            Math.abs(bestSnapResult.snappedPosition[2] - z)
-          if (!bestSnapResult.snapped || totalDelta < bestDelta) {
-            bestSnapResult = {
-              snappedPosition: [x + offsetX, 0, z + offsetZ],
-              guides: result.guides,
-              snapped: true,
-            }
-          }
-        }
-      }
-
-      if (bestSnapResult.snapped) {
-        x = bestSnapResult.snappedPosition[0]
-        z = bestSnapResult.snappedPosition[2]
-        useSnapGuides.getState().setGuides(bestSnapResult.guides)
-      } else {
-        useSnapGuides.getState().clearGuides()
-      }
-    }
-    // --- End smart object snapping ---
+    const x = snapToGrid(event.localPosition[0], swapDims ? dimZ : dimX)
+    const z = snapToGrid(event.localPosition[2], swapDims ? dimX : dimZ)
 
     return {
       gridPosition: [x, 0, z],
@@ -163,9 +86,6 @@ export const floorStrategy = {
     ).valid
 
     if (!valid) return null
-
-    // Clear snap guides on commit
-    useSnapGuides.getState().clearGuides()
 
     return {
       nodeUpdate: {

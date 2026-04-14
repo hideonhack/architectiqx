@@ -1,12 +1,10 @@
 import { emitter, type GridEvent, type LevelNode, useScene, type WallNode } from '@pascal-app/core'
 import { useViewer } from '@pascal-app/viewer'
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
+import { useEffect, useRef } from 'react'
 import { DoubleSide, type Group, type Mesh, Shape, ShapeGeometry, Vector3 } from 'three'
 import { markToolCancelConsumed } from '../../../hooks/use-keyboard'
 import { EDITOR_LAYER } from '../../../lib/constants'
 import { sfxEmitter } from '../../../lib/sfx-bus'
-import { DimensionInputOverlay } from '../../ui/dimension-input-overlay'
 import { CursorSphere } from '../shared/cursor-sphere'
 import { createWallOnCurrentLevel, snapWallDraftPoint, type WallPlanPoint } from './wall-drafting'
 
@@ -75,59 +73,6 @@ export const WallTool: React.FC = () => {
   const endingPoint = useRef(new Vector3(0, 0, 0))
   const buildingState = useRef(0)
   const shiftPressed = useRef(false)
-  const dimensionInputActive = useRef(false)
-
-  const [dimensionOverlay, setDimensionOverlay] = useState<{
-    visible: boolean
-    currentLength: number
-  }>({ visible: false, currentLength: 0 })
-
-  const openDimensionInput = useCallback(() => {
-    if (buildingState.current !== 1) return
-    const dx = endingPoint.current.x - startingPoint.current.x
-    const dz = endingPoint.current.z - startingPoint.current.z
-    const length = Math.sqrt(dx * dx + dz * dz)
-    if (length < 0.01) return
-    dimensionInputActive.current = true
-    setDimensionOverlay({ visible: true, currentLength: length })
-  }, [])
-
-  const handleDimensionSubmit = useCallback((length: number) => {
-    if (buildingState.current !== 1) return
-    const dx = endingPoint.current.x - startingPoint.current.x
-    const dz = endingPoint.current.z - startingPoint.current.z
-    const currentLength = Math.sqrt(dx * dx + dz * dz)
-    if (currentLength < 0.01) return
-
-    // Calculate end point at exact length along current direction
-    const dirX = dx / currentLength
-    const dirZ = dz / currentLength
-    const exactEnd: WallPlanPoint = [
-      startingPoint.current.x + dirX * length,
-      startingPoint.current.z + dirZ * length,
-    ]
-
-    createWallOnCurrentLevel(
-      [startingPoint.current.x, startingPoint.current.z],
-      exactEnd,
-    )
-
-    // Update preview to show final wall, then hide
-    if (wallPreviewRef.current) {
-      const finalEnd = new Vector3(exactEnd[0], endingPoint.current.y, exactEnd[1])
-      updateWallPreview(wallPreviewRef.current, startingPoint.current, finalEnd)
-      wallPreviewRef.current.visible = false
-    }
-
-    buildingState.current = 0
-    dimensionInputActive.current = false
-    setDimensionOverlay({ visible: false, currentLength: 0 })
-  }, [])
-
-  const handleDimensionCancel = useCallback(() => {
-    dimensionInputActive.current = false
-    setDimensionOverlay({ visible: false, currentLength: 0 })
-  }, [])
 
   useEffect(() => {
     let gridPosition: WallPlanPoint = [0, 0]
@@ -137,8 +82,6 @@ export const WallTool: React.FC = () => {
     // so local coords are used for both data and visual positioning.
     const onGridMove = (event: GridEvent) => {
       if (!(cursorRef.current && wallPreviewRef.current)) return
-      // Pause preview updates while dimension input is active
-      if (dimensionInputActive.current) return
 
       const walls = getCurrentLevelWalls()
       // event.localPosition is building-local — consistent with stored wall start/end
@@ -173,9 +116,6 @@ export const WallTool: React.FC = () => {
     }
 
     const onGridClick = (event: GridEvent) => {
-      // Ignore clicks while dimension input is active
-      if (dimensionInputActive.current) return
-
       const walls = getCurrentLevelWalls()
       const localClick: WallPlanPoint = [event.localPosition[0], event.localPosition[2]]
 
@@ -196,7 +136,7 @@ export const WallTool: React.FC = () => {
         const dx = snappedEnd[0] - startingPoint.current.x
         const dz = snappedEnd[1] - startingPoint.current.z
         if (dx * dx + dz * dz < 0.01 * 0.01) return
-        // Both start and end are building-local
+        // Both start and end are building-local ✓
         createWallOnCurrentLevel([startingPoint.current.x, startingPoint.current.z], snappedEnd)
         wallPreviewRef.current.visible = false
         buildingState.current = 0
@@ -206,16 +146,6 @@ export const WallTool: React.FC = () => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Shift') {
         shiftPressed.current = true
-        return
-      }
-
-      // Only trigger dimension input when drawing (buildingState === 1) and not already active
-      if (buildingState.current === 1 && !dimensionInputActive.current) {
-        if (e.key === 'Tab' || (e.key >= '0' && e.key <= '9')) {
-          e.preventDefault()
-          e.stopPropagation()
-          openDimensionInput()
-        }
       }
     }
 
@@ -226,12 +156,6 @@ export const WallTool: React.FC = () => {
     }
 
     const onCancel = () => {
-      if (dimensionInputActive.current) {
-        markToolCancelConsumed()
-        dimensionInputActive.current = false
-        setDimensionOverlay({ visible: false, currentLength: 0 })
-        return
-      }
       if (buildingState.current === 1) {
         markToolCancelConsumed()
         buildingState.current = 0
@@ -252,7 +176,7 @@ export const WallTool: React.FC = () => {
       window.removeEventListener('keydown', onKeyDown)
       window.removeEventListener('keyup', onKeyUp)
     }
-  }, [openDimensionInput])
+  }, [])
 
   return (
     <group>
@@ -271,17 +195,6 @@ export const WallTool: React.FC = () => {
           transparent
         />
       </mesh>
-
-      {/* Dimension input overlay — rendered in DOM via portal */}
-      {createPortal(
-        <DimensionInputOverlay
-          currentLength={dimensionOverlay.currentLength}
-          onSubmit={handleDimensionSubmit}
-          onCancel={handleDimensionCancel}
-          visible={dimensionOverlay.visible}
-        />,
-        document.body,
-      )}
     </group>
   )
 }

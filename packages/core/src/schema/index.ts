@@ -14,7 +14,7 @@ export {
 } from './material'
 export { BuildingNode } from './nodes/building'
 export { CeilingNode } from './nodes/ceiling'
-export { DoorNode, DoorSegment, DoorStyle } from './nodes/door'
+export { DoorNode, DoorSegment } from './nodes/door'
 export { FenceBaseStyle, FenceNode, FenceStyle } from './nodes/fence'
 export { GuideNode } from './nodes/guide'
 export type {
@@ -37,7 +37,7 @@ export { ScanNode } from './nodes/scan'
 // Nodes
 export { SiteNode } from './nodes/site'
 export { SlabNode } from './nodes/slab'
-export { StairNode, StairRailingMode, StairSupportType, StairTopLandingMode, StairType } from './nodes/stair'
+export { StairNode, StairRailingMode, StairTopLandingMode, StairType } from './nodes/stair'
 export { AttachmentSide, StairSegmentNode, StairSegmentType } from './nodes/stair-segment'
 export { WallNode } from './nodes/wall'
 export { WindowNode } from './nodes/window'

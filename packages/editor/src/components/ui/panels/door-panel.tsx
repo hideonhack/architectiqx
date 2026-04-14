@@ -4,7 +4,6 @@ import {
   type AnyNode,
   type AnyNodeId,
   DoorNode,
-  type DoorStyle,
   emitter,
   type MaterialSchema,
   useScene,
@@ -216,66 +215,6 @@ export function DoorPanel() {
         </PresetsPopover>
       </div>
 
-      <PanelSection title="Style">
-        <div className="flex flex-col gap-2 px-1 pb-1">
-          <SegmentedControl
-            onChange={(v) => handleUpdate({ doorStyle: v as DoorStyle })}
-            options={[
-              { label: 'Single', value: 'single' },
-              { label: 'Double', value: 'double' },
-              { label: 'Sliding', value: 'sliding' },
-            ]}
-            value={node.doorStyle ?? 'single'}
-          />
-          <SegmentedControl
-            onChange={(v) => handleUpdate({ doorStyle: v as DoorStyle })}
-            options={[
-              { label: 'Barn', value: 'barn' },
-              { label: 'Bifold', value: 'bifold' },
-              { label: 'Pocket', value: 'pocket' },
-            ]}
-            value={node.doorStyle ?? 'single'}
-          />
-        </div>
-        {(node.doorStyle === 'double') && (
-          <SliderControl
-            label="Leaf Ratio"
-            max={0.7}
-            min={0.3}
-            onChange={(v) => handleUpdate({ leafRatio: v })}
-            precision={2}
-            step={0.05}
-            value={node.leafRatio ?? 0.5}
-          />
-        )}
-        {(node.doorStyle === 'sliding' || node.doorStyle === 'barn' || node.doorStyle === 'pocket') && (
-          <div className="space-y-1 px-1">
-            <span className="font-medium text-[10px] text-muted-foreground/80 uppercase tracking-wider">
-              Slide Direction
-            </span>
-            <SegmentedControl
-              onChange={(v) => handleUpdate({ slideDirection: v as 'left' | 'right' })}
-              options={[
-                { label: 'Left', value: 'left' },
-                { label: 'Right', value: 'right' },
-              ]}
-              value={node.slideDirection ?? 'left'}
-            />
-          </div>
-        )}
-        {node.doorStyle === 'bifold' && (
-          <SliderControl
-            label="Panels"
-            max={6}
-            min={2}
-            onChange={(v) => handleUpdate({ foldPanels: Math.round(v) })}
-            precision={0}
-            step={1}
-            value={node.foldPanels ?? 4}
-          />
-        )}
-      </PanelSection>
-
       <PanelSection title="Position">
         <SliderControl
           label={
@@ -372,38 +311,36 @@ export function DoorPanel() {
         />
       </PanelSection>
 
-      {(!node.doorStyle || node.doorStyle === 'single' || node.doorStyle === 'double') && (
-        <PanelSection title="Swing">
-          <div className="flex flex-col gap-2 px-1 pb-1">
-            <div className="space-y-1">
-              <span className="font-medium text-[10px] text-muted-foreground/80 uppercase tracking-wider">
-                Hinges Side
-              </span>
-              <SegmentedControl
-                onChange={(v) => handleUpdate({ hingesSide: v })}
-                options={[
-                  { label: 'Left', value: 'left' },
-                  { label: 'Right', value: 'right' },
-                ]}
-                value={node.hingesSide}
-              />
-            </div>
-            <div className="space-y-1">
-              <span className="font-medium text-[10px] text-muted-foreground/80 uppercase tracking-wider">
-                Direction
-              </span>
-              <SegmentedControl
-                onChange={(v) => handleUpdate({ swingDirection: v })}
-                options={[
-                  { label: 'Inward', value: 'inward' },
-                  { label: 'Outward', value: 'outward' },
-                ]}
-                value={node.swingDirection}
-              />
-            </div>
+      <PanelSection title="Swing">
+        <div className="flex flex-col gap-2 px-1 pb-1">
+          <div className="space-y-1">
+            <span className="font-medium text-[10px] text-muted-foreground/80 uppercase tracking-wider">
+              Hinges Side
+            </span>
+            <SegmentedControl
+              onChange={(v) => handleUpdate({ hingesSide: v })}
+              options={[
+                { label: 'Left', value: 'left' },
+                { label: 'Right', value: 'right' },
+              ]}
+              value={node.hingesSide}
+            />
           </div>
-        </PanelSection>
-      )}
+          <div className="space-y-1">
+            <span className="font-medium text-[10px] text-muted-foreground/80 uppercase tracking-wider">
+              Direction
+            </span>
+            <SegmentedControl
+              onChange={(v) => handleUpdate({ swingDirection: v })}
+              options={[
+                { label: 'Inward', value: 'inward' },
+                { label: 'Outward', value: 'outward' },
+              ]}
+              value={node.swingDirection}
+            />
+          </div>
+        </div>
+      </PanelSection>
 
       <PanelSection title="Threshold">
         <ToggleControl
