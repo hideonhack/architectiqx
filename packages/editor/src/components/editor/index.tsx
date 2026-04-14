@@ -58,6 +58,7 @@ import { SelectionManager } from './selection-manager'
 import { SiteEdgeLabels } from './site-edge-labels'
 import { TopViewIndicators } from './topview-indicators'
 import { type SnapshotCameraData, ThumbnailGenerator } from './thumbnail-generator'
+import { ResizeHandles } from './resize-handles'
 import { WallMeasurementLabel } from './wall-measurement-label'
 
 const CAMERA_CONTROLS_HINT_DISMISSED_STORAGE_KEY = 'editor-camera-controls-hint-dismissed:v1'
@@ -518,6 +519,7 @@ const ViewerSceneContent = memo(function ViewerSceneContent({
   return (
     <>
       {!isFirstPersonMode && <SelectionManager />}
+      {!isFirstPersonMode && <ResizeHandles />}
       {!isVersionPreviewMode && !isFirstPersonMode && <BoxSelectTool />}
       {!isVersionPreviewMode && !isFirstPersonMode && <FloatingActionMenu />}
       {!isVersionPreviewMode && !isFirstPersonMode && <FloatingBuildingActionMenu />}
